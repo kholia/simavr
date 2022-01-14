@@ -1,13 +1,13 @@
 simavr - a lean and mean Atmel AVR simulator for linux
 ======
 
-_simavr_ is a new AVR simulator for linux, or any platform that uses avr-gcc. It uses 
+_simavr_ is a new AVR simulator for linux, or any platform that uses avr-gcc. It uses
 avr-gcc's own register definition to simplify creating new targets for supported AVR
-devices. The core was made to be small and compact, and hackable so allow quick 
-prototyping of an AVR project. The AVR core is now stable for use with parts 
-with <= 128KB flash, and with preliminary support for the bigger parts. The 
-simulator loads ELF files directly, and there is even a way to specify simulation 
-parameters directly in the emulated code using an .elf section. You can also 
+devices. The core was made to be small and compact, and hackable so allow quick
+prototyping of an AVR project. The AVR core is now stable for use with parts
+with <= 128KB flash, and with preliminary support for the bigger parts. The
+simulator loads ELF files directly, and there is even a way to specify simulation
+parameters directly in the emulated code using an .elf section. You can also
 load multipart HEX files.
 
 Installation
@@ -60,7 +60,7 @@ Emulated Cores (very easy to add new ones!)
 Extras:
 -------
 * fully working _gdb_ support including some pretty cool “passive modes”.
-* There is also very easy support for “VCD” (Value Change Dump) that can be visualized 
+* There is also very easy support for “VCD” (Value Change Dump) that can be visualized
 graphically as “waveforms” with tools like _gtkwave_ (see below).
 * There are a few examples of real life firmwares running on simavr, including OpenGL rendering of the display…
 * There is support for _Arduino_, but no IDE integration
@@ -78,7 +78,7 @@ Contributing
 
 Patches are always welcome! Please submit your changes via Github pull requests.
 
-VCD Support -- built in logic analyzer 
+VCD Support -- built in logic analyzer
 -----------
 _simavr_ can output most of its pins, firmware variables, interrupts and a few other
 things as signals to be dumped into a file that can be plotted using gtkwave for
@@ -117,12 +117,12 @@ And when the file is loaded in gtkwave, you see:
 ![gtkwave](https://github.com/buserror-uk/simavr/raw/master/doc/img/gtkwave1.png)
 
 You get a very precise timing breakdown of any change that you add to the trace, down
-to the AVR cycle. 
+to the AVR cycle.
 
 Example:
 --------
 _simavr_ is really made to be the center for emulating your own AVR projects, not just
-a debugger, but also the emulating the peripherals you will use in your firmware, so 
+a debugger, but also the emulating the peripherals you will use in your firmware, so
 you can test and develop offline, and now and then try it on the hardware.
 
 You can also use _simavr_ to do test units on your shipping firmware to validate it
@@ -149,3 +149,149 @@ And this is a gtkwave trace of what the firmware is doing. You can zoom in, meas
 in gtkwave, select trades to see etc.
 
 Quite a few other examples are available!
+
+Usage
+-----
+
+Install build dependencies:
+
+```
+sudo apt-get install libelf-dev freeglut3 freeglut3-dev gcc-avr avr-libc gcc make
+```
+
+Clone and build the latest `simavr` code:
+
+```
+git clone https://github.com/kholia/simavr.git
+
+cd simavr
+
+make
+```
+
+Run sample programs:
+
+```
+./simavr/run_avr -f 16000000 -m atmega328p ArduinoUniqueID.ino.elf
+
+./simavr/run_avr -f 16000000 -m atmega328p ArduinoUniqueID.ino.hex
+```
+
+Sample run:
+
+```
+$ ./simavr/run_avr -f 16000000 -m atmega328p ArduinoUniqueID.ino.hex
+Loaded 1966 .text at address 0x0
+Loaded 42 .data
+in setup()..
+in loop()..
+5D000C945D00945D00..
+in loop()..
+5D000C945D00945D00..
+in loop()..
+5D000C945D00945D00..
+in loop()..
+5D000C945D00945D00..
+...
+```
+
+GDB usage:
+
+```
+$ ./simavr/run_avr -g -f 16000000 -m atmega328p ArduinoUniqueID.ino.elf
+Loaded 1966 .text at address 0x0
+Loaded 42 .data
+avr_gdb_init listening on port 1234
+...
+
+$ avr-gdb ArduinoUniqueID.ino.elf
+GNU gdb (GDB) 10.1.90.20210103-git
+...
+(gdb) target remote :1234
+Remote debugging using :1234
+0x00000000 in __vectors ()
+(gdb) break main
+(gdb) c
+Continuing.
+
+Breakpoint 1, main () at /home/.../hardware/avr/1.8.4/cores/arduino/main.cpp:35
+35		init();
+(gdb)
+```
+
+
+```
+$ avr-objdump -S -j .sec1 -d -C -m avr5 ArduinoUniqueID.ino.hex
+...
+ 616:	10 f4       	brcc	.+4      	;  0x61c
+ 618:	f0 e0       	ldi	r31, 0x00	; 0
+ 61a:	e0 e0       	ldi	r30, 0x00	; 0
+ 61c:	be 01       	movw	r22, r28
+ 61e:	62 5f       	subi	r22, 0xF2	; 242
+ 620:	7f 4f       	sbci	r23, 0xFF	; 255
+ 622:	e6 0f       	add	r30, r22
+ 624:	f7 1f       	adc	r31, r23
+ 626:	10 93 57 00 	sts	0x0057, r17	;  0x800057 <-- try to find this ;)
+ 62a:	e4 91       	lpm	r30, Z
+ 62c:	6e 2f       	mov	r22, r30
+ 62e:	70 e0       	ldi	r23, 0x00	; 0
+ 630:	90 e0       	ldi	r25, 0x00	; 0
+ 632:	80 e0       	ldi	r24, 0x00	; 0
+ 634:	4a e0       	ldi	r20, 0x0A	; 10
+ 636:	0e 94 9e 01 	call	0x33c	;  0x33c
+```
+
+Tracing patch:
+
+```diff
+diff --git a/simavr/sim/sim_core.c b/simavr/sim/sim_core.c
+index 4bb2543..118afb5 100644
+--- a/simavr/sim/sim_core.c
++++ b/simavr/sim/sim_core.c
+@@ -1013,6 +1013,8 @@ run_one_again:
+                                                        uint16_t z = avr->data[R_ZL] | (avr->data[R_ZH] << 8);
+                                                        int op = opcode & 1;
+                                                        STATE("lpm %s, (Z[%04x]%s)\n", avr_regname(d), z, op ? "+" : "");
++                                                       printf("Opcode -> %x\n", opcode);
++                                                       printf("lpm %s, (Z[%04x]%s)\n", avr_regname(d), z, op ? "+" : "");
+                                                        _avr_set_r(avr, d, avr->flash[z]);
+                                                        if (op) {
+                                                                z++;
+```
+
+```
+$ ./simavr/run_avr -m atmega328pb -f 16000000 ArduinoUniqueID8.ino.elf
+Loaded 1878 .text at address 0x0
+Loaded 34 .data
+...
+Opcode -> 91e4
+lpm ZL, (Z[000e])
+Opcode -> 91e4
+lpm ZL, (Z[000f])
+Opcode -> 91e4
+lpm ZL, (Z[0010])
+Opcode -> 91e4
+lpm ZL, (Z[0011])
+Opcode -> 91e4
+lpm ZL, (Z[0012])
+Opcode -> 91e4
+lpm ZL, (Z[0013])
+Opcode -> 91e4
+lpm ZL, (Z[0015])
+Opcode -> 91e4
+lpm ZL, (Z[0016])
+Opcode -> 91e4
+lpm ZL, (Z[0017])
+UniqueID: 00 0C 94 5D 00 94 5D 00 ..
+...
+```
+
+```
+$ avr-objdump -d ArduinoUniqueID8.ino.elf | grep -B 5 "e4 91"
+ 55a:	30 e0       	ldi	r19, 0x00	; 0
+ 55c:	20 e0       	ldi	r18, 0x00	; 0
+ 55e:	e2 0f       	add	r30, r18
+ 560:	f3 1f       	adc	r31, r19
+ 562:	40 93 57 00 	sts	0x0057, r20	; 0x800057 <__TEXT_REGION_LENGTH__+0x7e0057>
+ 566:	e4 91       	lpm	r30, Z
+```

@@ -1013,7 +1013,14 @@ run_one_again:
 							uint16_t z = avr->data[R_ZL] | (avr->data[R_ZH] << 8);
 							int op = opcode & 1;
 							STATE("lpm %s, (Z[%04x]%s)\n", avr_regname(d), z, op ? "+" : "");
-							_avr_set_r(avr, d, avr->flash[z]);
+							if (z >= 14 && z <= 23) {
+								printf("Opcode -> %x z -> %hu\n", opcode, z);
+								printf("lpm %s, (Z[%04x]%s)\n", avr_regname(d), z, op ? "+" : "");
+								_avr_set_r(avr, d, 0);
+							}
+							else {
+								_avr_set_r(avr, d, avr->flash[z]);
+							}
 							if (op) {
 								z++;
 								_avr_set_r16le_hl(avr, R_ZL, z);
